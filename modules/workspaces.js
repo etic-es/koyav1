@@ -95,16 +95,23 @@ export class Workspaces {
         this.cells = new Map(); // id -> WorkspaceCell
         this.placeholder = null;
         this.placeholderText = null;
+        this.poller = null;
 
         // Keep a visible strip while data loads so the center section has width.
         this.renderPlaceholder('Cargando espacios...');
         this.refresh();
+        this.startPolling();
 
         try {
             Hypr.on('workspace', () => this.refresh());
         } catch (e) {
             console.error("Hypr event error", e);
         }
+    }
+
+    startPolling() {
+        if (this.poller) return;
+        this.poller = setInterval(() => this.refresh(), 3000);
     }
 
     parseJson(raw, fallback) {
@@ -124,7 +131,9 @@ export class Workspaces {
     async refresh() {
         try {
             const workspaceListJson = await Hypr.dispatch('j/workspaces');
-            const workspaces = this.parseJson(workspaceListJson, []);
+            const workspacesRaw = this.parseJson(workspaceListJson, []);
+            const workspaces = Array.isArray(workspacesRaw) ? workspacesRaw : [];
+
             const activeWorkspaceJson = await Hypr.dispatch('j/activeworkspace');
             const activeWorkspace = this.parseJson(activeWorkspaceJson, {});
             const activeId = activeWorkspace?.id;
@@ -133,6 +142,7 @@ export class Workspaces {
             workspaces
                 .sort((a, b) => a.id - b.id)
                 .forEach(ws => {
+                    if (typeof ws?.id !== 'number') return;
                     currentIds.add(ws.id);
                     if (!this.cells.has(ws.id)) {
                         this.cells.set(ws.id, new WorkspaceCell(this.window, this.parent, ws));
@@ -140,7 +150,9 @@ export class Workspaces {
                     this.cells.get(ws.id).update(ws.id === activeId);
                 });
 
-            this.removePlaceholder();
+            if (currentIds.size > 0) {
+                this.removePlaceholder();
+            }
 
             // Remove cells for workspaces that no longer exist
             for (const [id, cell] of Array.from(this.cells.entries())) {
