@@ -93,6 +93,7 @@ export class Workspaces {
         this.window = window;
         this.parent = parent;
         this.cells = new Map(); // id -> WorkspaceCell
+        this.placeholder = null;
 
         this.refresh();
 
@@ -122,6 +123,8 @@ export class Workspaces {
                     this.cells.get(ws.id).update(ws.id === activeId);
                 });
 
+            this.removePlaceholder();
+
             // Remove cells for workspaces that no longer exist
             for (const [id, cell] of Array.from(this.cells.entries())) {
                 if (!currentIds.has(id)) {
@@ -129,8 +132,56 @@ export class Workspaces {
                     this.cells.delete(id);
                 }
             }
+
+            if (this.cells.size === 0) {
+                this.renderPlaceholder('No workspaces');
+            }
         } catch (e) {
             console.error("Failed to get active workspace", e);
+            this.renderPlaceholder('Workspace error');
         }
+    }
+
+    renderPlaceholder(text) {
+        if (this.placeholder) return;
+        this.placeholder = UI.createElement(this.window, {
+            id: 'ws_placeholder',
+            renderable: {
+                type: 'box',
+                colour: Colors.background,
+            },
+            layout: {
+                type: 'row',
+                alignItems: 'center',
+            },
+            item: {
+                padding: { l: 6, r: 6 },
+                size: { x: 'auto', y: 22 }
+            }
+        });
+
+        const textElement = UI.createElement(this.window, {
+            id: 'ws_placeholder_text',
+            renderable: {
+                type: 'text',
+                string: text,
+                font: Fonts.main,
+                size: Fonts.size,
+                colour: Colors.dim,
+            },
+            contentAlign: 'center',
+            item: {
+                size: { x: 'auto', y: 'auto' }
+            }
+        });
+
+        UI.attach(this.window, this.placeholder, textElement);
+        UI.attach(this.window, this.parent, this.placeholder);
+    }
+
+    removePlaceholder() {
+        if (!this.placeholder) return;
+        UI.destroyElement(this.window, this.placeholder);
+        this.placeholder = null;
     }
 }

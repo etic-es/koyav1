@@ -13,7 +13,9 @@ export const Colors = {
 };
 
 export const Fonts = {
-    main: ".local/share/fonts/patched/GTWalsheimPro-CondensedRegular-NerdPatched.ttf",
+    // Use a widely available font to avoid load errors; override with an absolute
+    // path if you have a custom patched font installed.
+    main: "Noto Sans",
     size: 20,
 };
 
