@@ -107,13 +107,27 @@ export class Workspaces {
         }
     }
 
+    parseJson(raw, fallback) {
+        if (!raw) return fallback;
+        if (typeof raw === 'string') {
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                console.error('No se pudo parsear JSON de Hypr', raw, e);
+                return fallback;
+            }
+        }
+        // Hypr puede devolver ya un objeto
+        return raw;
+    }
+
     async refresh() {
         try {
             const workspaceListJson = await Hypr.dispatch('j/workspaces');
-            const workspaces = JSON.parse(workspaceListJson);
+            const workspaces = this.parseJson(workspaceListJson, []);
             const activeWorkspaceJson = await Hypr.dispatch('j/activeworkspace');
-            const activeWorkspace = JSON.parse(activeWorkspaceJson);
-            const activeId = activeWorkspace.id;
+            const activeWorkspace = this.parseJson(activeWorkspaceJson, {});
+            const activeId = activeWorkspace?.id;
 
             const currentIds = new Set();
             workspaces
@@ -137,11 +151,11 @@ export class Workspaces {
             }
 
             if (this.cells.size === 0) {
-                this.renderPlaceholder('No workspaces');
+                this.renderPlaceholder('Sin espacios activos');
             }
         } catch (e) {
             console.error("Failed to get active workspace", e);
-            this.renderPlaceholder('Workspace error');
+            this.renderPlaceholder('Error al cargar espacios');
         }
     }
 
