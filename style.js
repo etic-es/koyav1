@@ -13,9 +13,10 @@ export const Colors = {
 };
 
 export const Fonts = {
-    // Use a widely available font to avoid load errors; override with an absolute
-    // path if you have a custom patched font installed.
-    main: "Noto Sans",
+    // Preferred Nerd Font path requested by the user. Ensure it exists on disk;
+    // if not, Koya will fall back to its defaults or you can swap in another
+    // absolute path.
+    main: ".local/share/fonts/patched/GTWalsheimPro-CondensedRegular-NerdPatched.ttf",
     size: 20,
 };
 
