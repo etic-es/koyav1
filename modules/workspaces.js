@@ -82,6 +82,10 @@ class WorkspaceCell {
         UI.destroyElement(this.window, this.container);
         this.createUI();
     }
+
+    destroy() {
+        UI.destroyElement(this.window, this.container);
+    }
 }
 
 export class Workspaces {
@@ -90,38 +94,40 @@ export class Workspaces {
         this.parent = parent;
         this.cells = new Map(); // id -> WorkspaceCell
 
-        // Render synchronously immediately
-        this.renderStatic();
-
-        // Then update active state asynchronously
-        this.updateActive();
+        this.refresh();
 
         try {
-            Hypr.on('workspace', () => this.updateActive());
+            Hypr.on('workspace', () => this.refresh());
         } catch (e) {
             console.error("Hypr event error", e);
         }
     }
 
-    renderStatic() {
-        // Static list of 10 workspaces to GUARANTEE visibility immediately
-        const workspaces = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, name: `${i + 1}` }));
-
-        workspaces.forEach(ws => {
-            if (!this.cells.has(ws.id)) {
-                this.cells.set(ws.id, new WorkspaceCell(this.window, this.parent, ws));
-            }
-        });
-    }
-
-    async updateActive() {
+    async refresh() {
         try {
+            const workspaceListJson = await Hypr.dispatch('j/workspaces');
+            const workspaces = JSON.parse(workspaceListJson);
             const activeWorkspaceJson = await Hypr.dispatch('j/activeworkspace');
             const activeWorkspace = JSON.parse(activeWorkspaceJson);
             const activeId = activeWorkspace.id;
 
-            for (const [id, cell] of this.cells) {
-                cell.update(id === activeId);
+            const currentIds = new Set();
+            workspaces
+                .sort((a, b) => a.id - b.id)
+                .forEach(ws => {
+                    currentIds.add(ws.id);
+                    if (!this.cells.has(ws.id)) {
+                        this.cells.set(ws.id, new WorkspaceCell(this.window, this.parent, ws));
+                    }
+                    this.cells.get(ws.id).update(ws.id === activeId);
+                });
+
+            // Remove cells for workspaces that no longer exist
+            for (const [id, cell] of Array.from(this.cells.entries())) {
+                if (!currentIds.has(id)) {
+                    cell.destroy();
+                    this.cells.delete(id);
+                }
             }
         } catch (e) {
             console.error("Failed to get active workspace", e);
